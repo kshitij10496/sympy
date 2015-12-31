@@ -426,6 +426,9 @@ def test_contains():
     assert FiniteSet(1, 2, 3).contains(2) is S.true
     assert FiniteSet(1, 2, Symbol('x')).contains(Symbol('x')) is S.true
 
+    # issue 10326
+    assert Interval(-oo, oo).contains(oo) is S.false
+    assert Interval(-oo, oo).contains(-oo) is S.false
     # issue 8197
     from sympy.abc import a, b
     assert isinstance(FiniteSet(b).contains(-a), Contains)
