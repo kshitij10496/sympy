@@ -18,7 +18,7 @@ from sympy.sets.contains import Contains
 from mpmath import mpi, mpf
 from sympy.logic.boolalg import And, Or, Not, true, false
 from sympy.utilities import subsets
-
+from sympy.assumptions import ask, Q
 
 class Set(Basic):
     """
@@ -964,7 +964,7 @@ class Interval(Set, EvalfMixin):
         return FiniteSet(self.start, self.end)
 
     def _contains(self, other):
-        if other.is_real is False:
+        if ask(Q.real(other)) is False:
             return false
 
         if self.start is S.NegativeInfinity and self.end is S.Infinity:
