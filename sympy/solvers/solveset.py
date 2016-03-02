@@ -25,6 +25,7 @@ from sympy.sets import (FiniteSet, EmptySet, imageset, Interval, Intersection,
 from sympy.matrices import Matrix
 from sympy.polys import (roots, Poly, degree, together, PolynomialError,
                          RootOf)
+from sympy.sets.contains import Contains
 from sympy.solvers.solvers import checksol, denoms, unrad
 from sympy.solvers.inequalities import solve_univariate_inequality
 from sympy.utilities import filldedent
@@ -125,11 +126,9 @@ def _invert_real(f, g_ys, symbol):
                             symbol)
 
     if isinstance(f, Abs):
-        pos = Interval(0, S.Infinity)
-        neg = Interval(S.NegativeInfinity, 0)
-        return _invert_real(f.args[0],
-                    Union(imageset(Lambda(n, n), g_ys).intersect(pos),
-                          imageset(Lambda(n, -n), g_ys).intersect(neg)), symbol)
+        pos_map =  _invert_real(f.args[0], imageset(Lambda(n, n), g_ys), symbol)
+        neg_map = _invert_real(f.args[0], imageset(Lambda(n, -n), g_ys), symbol)
+        g_ys = ConditionSet(symbol, Contains((g_ys.args)[0], Interval[0, S.Infinity], evaluate=False), Union(pos_map[1], neg_map[1]))
 
     if f.is_Add:
         # f = g + h
