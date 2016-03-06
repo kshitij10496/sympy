@@ -21,7 +21,7 @@ from sympy.functions.elementary.trigonometric import (TrigonometricFunction,
                                                       HyperbolicFunction)
 from sympy.functions.elementary.miscellaneous import real_root
 from sympy.sets import (FiniteSet, EmptySet, imageset, Interval, Intersection,
-                        Union, ConditionSet)
+                        Union, ConditionSet, Contains)
 from sympy.matrices import Matrix
 from sympy.polys import (roots, Poly, degree, together, PolynomialError,
                          RootOf)
@@ -125,11 +125,26 @@ def _invert_real(f, g_ys, symbol):
                             symbol)
 
     if isinstance(f, Abs):
-        pos = Interval(0, S.Infinity)
-        neg = Interval(S.NegativeInfinity, 0)
-        return _invert_real(f.args[0],
-                    Union(imageset(Lambda(n, n), g_ys).intersect(pos),
-                          imageset(Lambda(n, -n), g_ys).intersect(neg)), symbol)
+        conditions = S.EmptySet
+        condition_interval = Interval(0, oo)
+        values =  _invert_real(f.args[0], Union(imageset(Lambda(n, n), g_ys), imageset(Lambda(n, -n), g_ys)), symbol)[1]
+        if isinstance(values, ConditionSet):
+            values_condition = values.condition.args[0]
+            if values.sym == symbol:
+                for condition_atom in values_condition.args[0].args:
+                    if condition_atom in g_ys.args:
+                        condition_interval = Intersection(condition_interval, FiniteSet(values_condition.args[1]))
+                        condition = FiniteSet(Contains(condition_atom, condition_interval, evaluate=False))
+                    else:
+                        condition_interval = values_condition.args[1]
+                        condition = FiniteSet(Contains(condition_atom, condition_interval, evaluate=False))
+                    conditions = Union(conditions, condition)    
+            else:
+                pass
+            values = values.base_set
+        conditions = Union(conditions, FiniteSet(Contains(g_ys, Interval(0, oo), evaluate=False)))   
+        return symbol, ConditionSet(symbol, conditions, values)
+
 
     if f.is_Add:
         # f = g + h
