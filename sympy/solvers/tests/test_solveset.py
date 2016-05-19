@@ -1046,7 +1046,7 @@ def test_issue_5132():
     assert nlinsolve([r - x**2 - y**2, tan(t) - y/x], [x, y]) == \
         {(-sqrt(r/(tan(t)**2 + 1)), -sqrt(r/(tan(t)**2 + 1))*tan(t)),\
          (sqrt(r/(tan(t)**2 + 1)), sqrt(r/(tan(t)**2 + 1))*tan(t))
-    assert set(solve([exp(x) - sin(y), y**2 - 4], [x, y])) == \
+    assert nlinsolve([exp(x) - sin(y), y**2 - 4], [x, y]) == \
         set([(log(-sin(2)), -S(2)), (log(sin(2)), S(2))])
     eqs = [exp(x)**2 - sin(y) + z**2, 1/exp(y) - 3]
     assert solve(eqs, set=True) == \
