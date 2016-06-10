@@ -1,7 +1,10 @@
 from sympy.core.sympify import sympify
-from sympy.solvers.solveset import solveset
+from sympy.sets import *
+from sympy.solvers.inequalities import solve_univariate_inequality
+from sympy.solvers.solveset import solveset, _has_rational_power
 from sympy.simplify import simplify
-from sympy import S
+from sympy import S, log, Pow
+from sympy.series.limits import limit
 
 
 def singularities(expr, sym):
@@ -38,6 +41,127 @@ def singularities(expr, sym):
                                   " implemented")
     else:
         return solveset(simplify(1/expr), sym)
+
+
+def function_range(f, symbol, domain):
+    """
+    Finds the range of a function in a given domain.
+    This method is limited by the ability to determine the singularities and
+    determine limits.
+
+    Examples
+    ========
+
+    >>> from sympy import Symbol, S, exp, log, pi, sqrt, sin, tan
+    >>> from sympy.sets import Interval
+    >>> from sympy.calculus.singularities import function_range
+    >>> x = Symbol('x')
+    >>> function_range(sin(x), x, Interval(0, 2*pi))
+    [-1, 1]
+    >>> function_range(tan(x), x, Interval(-pi/2, pi/2))
+    (-oo, oo)
+    >>> function_range(1/x, x, S.Reals)
+    (-oo, oo)
+    >>> function_range(exp(x), x, S.Reals)
+    (0, oo)
+    >>> function_range(log(x), x, S.Reals)
+    (-oo, oo)
+    >>> function_range(sqrt(x), x , Interval(-5, 9))
+    [0, 3]
+
+    """
+    vals = S.EmptySet
+    intervals = continuous_in(f, symbol, domain)
+    range_int = S.EmptySet
+    if isinstance(intervals, Interval):
+        interval_iter = (intervals,)
+    else:
+        interval_iter = intervals.args
+
+    for interval in interval_iter:
+        cps = S.EmptySet
+        cvs = S.EmptySet
+        bounds = ((interval.left_open, interval.inf, '+'),
+                  (interval.right_open, interval.sup, '-'))
+
+        for i in bounds:
+            if i[0]:
+                cvs += FiniteSet(limit(f, symbol, i[1], i[2]))
+                vals += cvs
+            else:
+                vals += FiniteSet(f.subs(symbol, i[1]))
+
+        cps += solveset(f.diff(symbol), symbol, domain)
+
+        for cp in cps:
+            vals += FiniteSet(f.subs(symbol, cp))
+
+        left_open, right_open = False, False
+
+        if cvs is not S.EmptySet:
+            if cvs.inf == vals.inf:
+                left_open = True
+            if cvs.sup == vals.sup:
+                right_open = True
+
+        range_int += Interval(vals.inf, vals.sup, left_open, right_open)
+
+    return range_int
+
+
+def continuous_in(f, symbol, interval):
+    """
+    Finds the intervals of continuity of a function in a given interval range.
+    This method is limited by the ability to determine the various
+    singularities and discontinuities of the given function.
+
+    Examples
+    ========
+    >>> from sympy import Symbol, S, tan, log, pi, sqrt
+    >>> from sympy.sets import Interval
+    >>> from sympy.calculus.singularities import continuous_in
+    >>> x = Symbol('x')
+    >>> continuous_in(1/x, x, S.Reals)
+    (-oo, 0) U (0, oo)
+    >>> continuous_in(tan(x), x, Interval(0, pi))
+    [0, pi/2) U (pi/2, pi]
+    >>> continuous_in(sqrt(x - 2), x, Interval(-5, 5))
+    [2, 5]
+    >>> continuous_in(log(2*x - 1), x, S.Reals)
+    (1/2, oo)
+
+    """
+    if interval.is_subset(S.Reals):
+        constrained_interval = interval
+        for atom in f.atoms(Pow):
+            predicate, denom = _has_rational_power(atom, symbol)
+            constraint = S.EmptySet
+            if predicate and denom == 2:
+                constraint = solve_univariate_inequality(atom.base >= 0,
+                                                         symbol).as_set()
+                constrained_interval = Intersection(constraint,
+                                                    constrained_interval)
+        for atom in f.atoms(log):
+            constraint = solve_univariate_inequality(atom.args[0] > 0,
+                                                     symbol).as_set()
+            constrained_interval = Intersection(constraint,
+                                                constrained_interval)
+        interval = constrained_interval
+    try:
+        sings = S.EmptySet
+        for atom in f.atoms(Pow):
+            predicate, denom = _has_rational_power(atom, symbol)
+            if predicate and denom == 2:
+                sings = solveset(1/f, symbol, interval)
+                break
+        else:
+            sings = Intersection(solveset(1/f, symbol), interval)
+    except:
+        raise NotImplementedError("Methods for determining the continuous domains"
+                                  " of this function has not been developed.")
+
+    return interval - sings
+
 
 ###########################################################################
 ###################### DIFFERENTIAL CALCULUS METHODS ######################
