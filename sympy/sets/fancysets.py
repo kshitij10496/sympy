@@ -197,6 +197,18 @@ class Reals(with_metaclass(Singleton, Interval)):
         return hash(Interval(-S.Infinity, S.Infinity))
 
 
+class ExtendedReals(with_metaclass(Singleton, Union)):
+
+    def __new__(cls):
+        return Union.__new__(cls, (S.Reals, FiniteSet(S.Infinity, S.NegativeInfinity)))
+
+    def __eq__(self, other):
+        return other == Union(S.Reals, FiniteSet(S.Infinity, S.NegativeInfinity))
+
+    def __hash__(self):
+        return hash(Union(S.Reals, FiniteSet(S.Infinity, S.NegativeInfinity)))
+
+
 class ImageSet(Set):
     """
     Image of a set under a mathematical function. The transformation
