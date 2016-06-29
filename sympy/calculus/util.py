@@ -55,19 +55,27 @@ def continuous_domain(f, symbol, domain):
         domain = constrained_interval
 
     try:
-        sings = S.EmptySet
+        all_sings = S.EmptySet
         for atom in f.atoms(Pow):
             predicate, denom = _has_rational_power(atom, symbol)
             if predicate and denom == 2:
-                sings = solveset(1/f, symbol, domain)
+                all_sings = solveset(1/f, symbol, domain)
                 break
         else:
-            sings = Intersection(solveset(1/f, symbol), domain)
+            all_sings = Intersection(solveset(1/f, symbol), domain)
 
     except:
         raise NotImplementedError("Methods for determining the continuous domains"
                                   " of this function has not been developed.")
 
+    # Add removable singularities to the domain
+    # using Riemann's theorem on removable singularities
+    new_sings = []
+    for sing in all_sings:
+        if limit((symbol - sing)*f, symbol, sing) != 0:
+            new_sings.append(sing)
+
+    sings = FiniteSet(*new_sings)
     return domain - sings
 
 
